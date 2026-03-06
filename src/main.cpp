@@ -26,6 +26,9 @@
 #define NUM_RGB_LEDS 2
 CRGB leds[NUM_RGB_LEDS];
 
+bool blockIn = false;
+int restCounter = 0;
+
 void beep(int pitchDelay, int duration)
 {
   for (int i = 0; i < duration; i++)
@@ -35,6 +38,7 @@ void beep(int pitchDelay, int duration)
     digitalWrite(PIN_SPKR, LOW);
     delayMicroseconds(pitchDelay);
   }
+  blockIn = false;
 }
 
 void blink()
@@ -50,6 +54,7 @@ void blink()
     digitalWrite(8, LOW);
     delay(500);
   }
+  blockIn = false;
 }
 
 void spkr()
@@ -66,6 +71,8 @@ void spkr()
     delayMicroseconds(60);
   }
   digitalWrite(PIN_SPKR, LOW);
+
+  blockIn = false;
 }
 
 void rgb()
@@ -90,6 +97,17 @@ void rgb()
   leds[1] = CRGB::Black;
   FastLED.show();
   delay(500);
+
+  blockIn = false;
+}
+
+void rest()
+{
+  Serial.println("X | awaiting command");
+
+  digitalWrite(6, HIGH);
+  digitalWrite(7, LOW);
+  digitalWrite(8, HIGH);
 }
 
 void setup()
@@ -114,29 +132,28 @@ void setup()
 
 void loop()
 {
-  Serial.println("X | awaiting command");
-
-  digitalWrite(6, HIGH);
-  digitalWrite(7, LOW);
-  digitalWrite(8, HIGH);
-
-  for (int i = 0; i < 100; i++)
+  restCounter++;
+  if (!blockIn)
   {
-    if (digitalRead(4))
+    if (digitalRead(PIN_S1))
     {
-      Serial.println("s | loudspeaker activated");
-      spkr();
-      break;
+      blockIn = true;
+      Serial.println("b | blinking headlights");
+      blink();
     }
-    else if (!digitalRead(2))
+    else if (!digitalRead(PIN_S2))
     {
+      blockIn = true;
       Serial.println("r | rgb LEDs activated");
       rgb();
-      break;
     }
-    else if (digitalRead(4) && !digitalRead(2))
+    else if (digitalRead(4) && !digitalRead(2)) //both pressed
     {
-      Serial.println("b | blink activated");
+      blockIn = true;
+      Serial.println("s | loudspeaker activated");
+      spkr();
+    } else if (restCounter == 100){
+      rest();
     }
     delay(30);
   }
