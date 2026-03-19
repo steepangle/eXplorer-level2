@@ -29,6 +29,10 @@ CRGB leds[NUM_RGB_LEDS];
 bool run = false;
 int speed = 50; //0...255
 
+int sensRefLeft;
+int sensRefRight;
+int sensRefFront;
+
 void rgb()
 {
     leds[0] = CRGB::Red;
@@ -41,10 +45,6 @@ void rgb()
     delay(500);
     leds[0] = CRGB::Blue;
     leds[1] = CRGB::Orange;
-    FastLED.show();
-    delay(500);
-    leds[0] = CRGB::Green;
-    leds[1] = CRGB::Purple;
     FastLED.show();
     delay(500);
     leds[0] = CRGB::Black;
@@ -72,9 +72,19 @@ void setup()
         pinMode(i, OUTPUT);
     }
 
-    pinMode(A0, INPUT); // right
-    pinMode(A1, INPUT); // left
-    pinMode(A4, INPUT); // center
+    pinMode(A0, INPUT); // sens right
+    pinMode(A1, INPUT); // sens left
+    pinMode(A4, INPUT); // sens front
+
+    //turn all lights off
+    digitalWrite(PIN_LED_C, LOW);
+    digitalWrite(PIN_LED_L, HIGH);
+    digitalWrite(PIN_LED_R, LOW);
+
+    //read 'default' values with lights out
+    sensRefLeft = analogRead(PIN_DIST_L);
+    sensRefRight = analogRead(PIN_DIST_R);
+    sensRefFront = analogRead(PIN_SENS_F);
 
     //turn all lights on
     digitalWrite(PIN_LED_C, HIGH);
@@ -105,57 +115,16 @@ void loop()
     if(digitalRead(PIN_S1) == HIGH) {
         run = true;
     }
-    /*
-    while (run)
-    {
-        if (digitalRead(PIN_S2) == LOW) {
-            run = false;
-            continue;
-        }
-        
-        int distFront = readSensF();
-        int distRight = readSensR();
-        int distLeft = readSensL();
-
-        int speedR = readSensR() / 12;
-        int speedL = readSensL() / 12;
-        analogWrite(PIN_M1_F, speedL);
-        analogWrite(PIN_M2_F, speedR);
-
-
-
-        if (distFront < 800 && distRight < 600) //go left
-        {
-            analogWrite(PIN_M1_F, 0);
-            analogWrite(PIN_M2_F, speed);
-        } else if (distFront < 800 && distLeft < 600) //go right
-        {
-            analogWrite(PIN_M1_F, speed);
-            analogWrite(PIN_M2_F, 0);
-        } else if (distFront)
-        {
-            
-        } else {  //go fwd
-            analogWrite(PIN_M1_F, speed);
-            analogWrite(PIN_M2_F, speed);
-            continue;
-        }
-    }*/
-
-    int leftNormal = 650;
-    int rightNormal = 750;
     
-    int distFront = readSensF();
-    int distRight = readSensR();
-    int distLeft = readSensL();
+    int distFront = readSensF() - sensRefFront;
+    int distRight = readSensR() - sensRefRight;
+    int distLeft = readSensL() - sensRefLeft;
 
     /*
-    int speedL = rightNormal - distRight;
-    int speedR = leftNormal - distLeft;
     analogWrite(PIN_M1_F, speedL);
     analogWrite(PIN_M2_F, speedR);
-
     */
+
     Serial.println("Left: " + (String)distLeft + " | Right: " + (String)distRight + " | Center: " + (String)distFront);
 }
     
