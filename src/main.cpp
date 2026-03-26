@@ -27,7 +27,7 @@
 CRGB leds[NUM_RGB_LEDS];
 
 bool run = false;
-int speed = 50; //0...255
+int speed = 50; // 0...255
 
 int sensRefLeft;
 int sensRefRight;
@@ -76,17 +76,17 @@ void setup()
     pinMode(A1, INPUT); // sens left
     pinMode(A4, INPUT); // sens front
 
-    //turn all lights off
+    // turn all lights off
     digitalWrite(PIN_LED_C, LOW);
     digitalWrite(PIN_LED_L, HIGH);
     digitalWrite(PIN_LED_R, LOW);
 
-    //read 'default' values with lights out
+    // read 'default' values with lights out
     sensRefLeft = analogRead(PIN_DIST_L);
     sensRefRight = analogRead(PIN_DIST_R);
     sensRefFront = analogRead(PIN_SENS_F);
 
-    //turn all lights on
+    // turn all lights on
     digitalWrite(PIN_LED_C, HIGH);
     digitalWrite(PIN_LED_L, LOW);
     digitalWrite(PIN_LED_R, HIGH);
@@ -110,21 +110,161 @@ int readSensF()
     return sens;
 }
 
+void turnLft(int speedLo, int speedHi)
+{
+    analogWrite(PIN_M1_F, speedHi); // left
+    analogWrite(PIN_M2_F, 0);       // right
+    analogWrite(PIN_M1_R, 0);
+    analogWrite(PIN_M2_R, speedLo);
+    delay(200);
+}
+
 void loop()
-{  
+{
+    /*
     if(digitalRead(PIN_S1) == HIGH) {
         run = true;
     }
-    
-    int distFront = readSensF() - sensRefFront;
-    int distRight = readSensR() - sensRefRight;
-    int distLeft = readSensL() - sensRefLeft;
 
-    /*
-    analogWrite(PIN_M1_F, speedL);
-    analogWrite(PIN_M2_F, speedR);
+    int distFront = sensRefFront - readSensF() + 100;
+    int distRight = sensRefRight - readSensR();
+    int distLeft = sensRefLeft - readSensL();
+
+    int speedL = 300 - distLeft;
+    int speedR = 300 - distRight;
+
+    speedL = speedL - 50;
+    speedR = speedR - 50;
+
+    if (speedL < 1) speedL = 20;
+    if (speedR < 1) speedR = 20;
+
+
+    //analogWrite(PIN_M1_F, speedL);
+    //analogWrite(PIN_M2_F, speedR);
+
+    // Serial.println("Left: " + (String)distLeft + " | Right: " + (String)distRight + " | Center: " + (String)distFront);
+    Serial.println("Left: " + (String)speedL + " | Right: " + (String)speedR);
     */
 
-    Serial.println("Left: " + (String)distLeft + " | Right: " + (String)distRight + " | Center: " + (String)distFront);
+    //if (run)
+    //{
+
+        /*
+        if (digitalRead(PIN_S1) == HIGH)
+        {
+            run = true;
+        }
+
+        if (digitalRead(PIN_S2) == LOW)
+        {
+            run = false;
+        }
+            */
+
+        int distFront = readSensF();
+        int distRight = readSensR();
+        // int distLeft = readSensL();
+
+        int speedHi = 60;
+        int speedLo = 60;
+
+        // int tripValue = 50;
+        // int delta = distLeft - distRight + 60;
+
+        // Serial.println("Delta: " + (String)delta);
+
+        // delta = 10;
+
+        Serial.println((String)distFront + "  |  " + (String)distRight);
+
+        // dist right
+        int max = 600;
+        int min = 500;
+
+        // dist
+        int fmax = 700;
+
+        if (distFront < fmax)
+        {
+            turnLft(speedLo, speedHi);
+
+            leds[0] = CRGB::Blue;
+            leds[1] = CRGB::Blue;
+            FastLED.show();
+        }
+        if (distRight < max && distRight > min)
+        {
+            analogWrite(PIN_M1_R, 0);
+            analogWrite(PIN_M2_R, 0);
+            analogWrite(PIN_M1_F, speedHi); // left
+            analogWrite(PIN_M2_F, speedHi); // right
+
+            leds[0] = CRGB::Green;
+            leds[1] = CRGB::Green;
+            FastLED.show();
+        }
+        if (distRight > max)
+        {
+            analogWrite(PIN_M1_F, 0);       // left
+            analogWrite(PIN_M2_F, speedHi); // right
+            analogWrite(PIN_M1_R, speedLo);
+            analogWrite(PIN_M2_R, 0);
+            // Serial.println("left obs");
+            leds[0] = CRGB::Yellow;
+            leds[1] = CRGB::Yellow;
+            FastLED.show();
+        }
+        if (distRight < min)
+        {
+            analogWrite(PIN_M1_F, speedHi); // left
+            analogWrite(PIN_M2_F, 0);       // right
+            analogWrite(PIN_M1_R, 0);
+            analogWrite(PIN_M2_R, speedLo);
+            // Serial.println("right obs");
+            leds[0] = CRGB::Red;
+            leds[1] = CRGB::Red;
+            FastLED.show();
+        }
+
+    /*
+    if (delta < (-tripValue))
+    {
+        analogWrite(PIN_M1_F, 0);  //left
+        analogWrite(PIN_M2_F, speedHi);  //right
+        analogWrite(PIN_M1_R, speedLo);
+        analogWrite(PIN_M2_R, 0);
+        Serial.println("left");
+    }
+    if (delta > tripValue) {
+        analogWrite(PIN_M1_F, speedHi);  //left
+        analogWrite(PIN_M2_F, 0);  //right
+        analogWrite(PIN_M1_R, 0);
+        analogWrite(PIN_M2_R, speedLo);
+        Serial.println("right");
+    }
+    if ((delta < tripValue) && (delta > (-tripValue))) {
+        analogWrite(PIN_M1_R, 0);
+        analogWrite(PIN_M2_R, 0);
+        analogWrite(PIN_M1_F, speedHi);  //left
+        analogWrite(PIN_M2_F, speedHi);  //right
+
+        Serial.println("straight");
+    }
+
+    */
+
+    /*
+    if (distLeft < distRight)
+    {
+        analogWrite(PIN_M1_F, speedLo);  //left
+        analogWrite(PIN_M2_F, speedHi);  //right
+    }
+
+    if (distLeft > distRight)
+    {
+        analogWrite(PIN_M1_F, speedHi);  //left
+        analogWrite(PIN_M2_F, speedLo);  //right
+    }
+    */
 }
-    
