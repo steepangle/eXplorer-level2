@@ -1,150 +1,172 @@
-// Remote Control
-
 #include <Arduino.h>
 #include <FastLED.h>
 
-#define PIN_RGB 13
-#define NUM_RGB_LEDS 2
-CRGB leds[NUM_RGB_LEDS];
-bool positionLight = true;
+#define PIN_LED_L 7
+#define PIN_LED_R 8
+#define PIN_LED_C 6
+
+#define PIN_DIST_L A1
+#define PIN_DIST_R A0
+#define PIN_SENS_F A4
+#define PIN_SENS_D A5
 
 #define PIN_M1_F 3
 #define PIN_M1_R 11
 #define PIN_M2_F 10
 #define PIN_M2_R 9
 
-const int buzPin = 5;  // Buzzer pin
-const int ledPin = 6;  // LED pin
-int speed = 130;       // speed
+#define PIN_SPKR 5
+#define PIN_S1 4
+#define PIN_S2 2
+#define PIN_RGB 13
 
-void setup() {
-    Serial.begin(9600);
+#define PIN_RX 2
+#define PIN_TX 3
+
+#define NUM_RGB_LEDS 2
+CRGB leds[NUM_RGB_LEDS];
+
+bool run = false;
+int speed = 50; // 0...255
+
+void setup()
+{
     FastLED.addLeds<NEOPIXEL, PIN_RGB>(leds, NUM_RGB_LEDS);
 
-    pinMode(PIN_RGB, OUTPUT);
+    delay(500);
 
-    pinMode(buzPin, OUTPUT);
-    pinMode(ledPin, OUTPUT);
+    // S1, S2
+    pinMode(2, INPUT);
+    pinMode(4, INPUT);
 
-    pinMode(PIN_M1_F, OUTPUT);
-    pinMode(PIN_M1_R, OUTPUT);
-    pinMode(PIN_M2_F, OUTPUT);
-    pinMode(PIN_M2_R, OUTPUT);
+    // OUT Pins 5 - 8
+    for (int i = 5; i <= 8; i++)
+    {
+        pinMode(i, OUTPUT);
+    }
 
-    // Stop all motors at the beginning
-    digitalWrite(PIN_M1_F, LOW);
-    digitalWrite(PIN_M1_R, LOW);
-    digitalWrite(PIN_M2_F, LOW);
-    digitalWrite(PIN_M2_R, LOW);
+    pinMode(A0, INPUT); //sens right
+    pinMode(A4, INPUT); //sens front
 
-    leds[0] = CRGB::Green;
-    leds[1] = CRGB::Red;
+    // turn all lights off
+    digitalWrite(PIN_LED_C, LOW);
+    digitalWrite(PIN_LED_L, HIGH);
+    digitalWrite(PIN_LED_R, LOW);
+}
+
+int readSensR()
+{
+    int sens = analogRead(PIN_DIST_R);
+    return sens;
+}
+
+int readSensF()
+{
+    int sens = analogRead(PIN_SENS_F);
+    return sens;
+}
+
+void turnLft(int speedLo, int speedHi)
+{
+    analogWrite(PIN_M1_F, speedHi); // left
+    analogWrite(PIN_M2_F, 0);       // right
+    analogWrite(PIN_M1_R, 0);
+    analogWrite(PIN_M2_R, speedLo);
+    delay(400);
+}
+
+void start() {
+    // turn all lights on
+    digitalWrite(PIN_LED_C, HIGH);
+    digitalWrite(PIN_LED_L, LOW);
+    digitalWrite(PIN_LED_R, HIGH);
+
+    run = true;
+}
+
+void stop() {
+    //turn all lights off
+    digitalWrite(PIN_LED_C, LOW);
+    digitalWrite(PIN_LED_L, HIGH);
+    digitalWrite(PIN_LED_R, LOW);
+
+    digitalWrite(PIN_M1_F, HIGH);
+    digitalWrite(PIN_M2_F, HIGH);
+    digitalWrite(PIN_M1_R, HIGH);
+    digitalWrite(PIN_M2_R, HIGH);
+    run = false;
+
+    leds[0] = CRGB::Black;
+    leds[1] = CRGB::Black;
     FastLED.show();
 }
 
-void loop() {
-    while (Serial.available() > 0) {
-        char command = Serial.read(); // Read command from serial
-        //Serial.println("BAT:75,SPEED:25"); // Set Battery and speed
+void loop()
+{
+    if (digitalRead(PIN_S1) == HIGH) {
+        start();
+    }
+    if (digitalRead(PIN_S2) == LOW) {
+        stop();
+    }
 
-        switch(command) {
-            case 'F':   // Move forward
-                analogWrite(PIN_M1_F, speed);
-                analogWrite(PIN_M1_R, 0);
-                analogWrite(PIN_M2_F, speed);
-                analogWrite(PIN_M2_R, 0);
-                break;
+    while (run)
+    {
+        if (digitalRead(PIN_S2) == LOW) stop();
 
-            case 'B':   // Move backward
-                analogWrite(PIN_M1_F, 0);
-                analogWrite(PIN_M1_R, speed);
-                analogWrite(PIN_M2_F, 0);
-                analogWrite(PIN_M2_R, speed);
-                break;
+        int distFront = readSensF();
+        int distRight = readSensR();
 
-            case 'R':   // Turn right
-                analogWrite(PIN_M1_F, 0);
-                analogWrite(PIN_M1_R, speed * 0.5);
-                analogWrite(PIN_M2_F, speed);
-                analogWrite(PIN_M2_R, 0);
-                break;
+        int speedHi = 70;
+        int speedLo = 40;
 
-            case 'L':   // Turn left
-                analogWrite(PIN_M1_F, speed);
-                analogWrite(PIN_M1_R, 0);
-                analogWrite(PIN_M2_F, 0);
-                analogWrite(PIN_M2_R, speed * 0.5);
-                break;
+        // dist right
+        int max = 650;
+        int min = 550;
 
-            case 'G':   // Forward left
-                analogWrite(PIN_M1_F, speed);
-                analogWrite(PIN_M1_R, 0);
-                analogWrite(PIN_M2_F, speed * 0.5);
-                analogWrite(PIN_M2_R, 0);
-                break;
+        // dist
+        int fmax = 700;
 
-            case 'H':   // Forward right
-                analogWrite(PIN_M1_F, speed * 0.5);
-                analogWrite(PIN_M1_R, 0);
-                analogWrite(PIN_M2_F, speed);
-                analogWrite(PIN_M2_R, 0);
-                break;
+        if (distFront < fmax)
+        {
+            leds[0] = CRGB::Blue;
+            leds[1] = CRGB::Blue;
+            FastLED.show();
 
-            case 'I':   // Backward left
-                analogWrite(PIN_M1_F, 0);
-                analogWrite(PIN_M1_R, speed);
-                analogWrite(PIN_M2_F, 0);
-                analogWrite(PIN_M2_R, speed * 0.5);
-                break;
+            turnLft(speedLo, speedHi);
+        }
+        if (distRight < max && distRight > min)
+        {
+            analogWrite(PIN_M1_R, 0);
+            analogWrite(PIN_M2_R, 0);
+            analogWrite(PIN_M1_F, speedHi); // left
+            analogWrite(PIN_M2_F, speedHi); // right
 
-            case 'J':   // Backward right
-                analogWrite(PIN_M1_F, 0);
-                analogWrite(PIN_M1_R, speed * 0.5);
-                analogWrite(PIN_M2_F, 0);
-                analogWrite(PIN_M2_R, speed);
-                break;
+            leds[0] = CRGB::Green;
+            leds[1] = CRGB::Green;
+            FastLED.show();
+        }
+        if (distRight > max)
+        {
+            analogWrite(PIN_M1_F, speedLo); // left
+            analogWrite(PIN_M2_F, speedHi); // right
+            analogWrite(PIN_M1_R, 0);
+            analogWrite(PIN_M2_R, 0);
 
-            case 'S':   // Stop all motors
-                analogWrite(PIN_M1_F, 0);
-                analogWrite(PIN_M1_R, 0);
-                analogWrite(PIN_M2_F, 0);
-                analogWrite(PIN_M2_R, 0);
-                break;
+            leds[0] = CRGB::Yellow;
+            leds[1] = CRGB::Yellow;
+            FastLED.show();
+        }
+        if (distRight < min)
+        {
+            analogWrite(PIN_M1_F, speedHi); // left
+            analogWrite(PIN_M2_F, speedLo);       // right
+            analogWrite(PIN_M1_R, 0);
+            analogWrite(PIN_M2_R, 0);
 
-            case 'Y':   // position Lights
-                if (!positionLight)
-                {
-                    leds[0] = CRGB::Green;
-                    leds[1] = CRGB::Red;
-                    FastLED.show();
-                    positionLight = true;
-                } else {
-                    leds[0] = CRGB::Black;
-                    leds[1] = CRGB::Black;
-                    FastLED.show();
-                    positionLight = false;
-                }
-                break;
-
-            case 'X':   // Turn headlight ON
-                digitalWrite(ledPin, HIGH);
-                break;
-
-            case 'x':   // Turn headlight OFF
-                digitalWrite(ledPin, LOW);
-                break;
-
-            // Setting motor speed using function buttons you can do anything you want (1-4)
-            case '0': speed = 0; break;
-            case '1': speed = 50; break;
-            case '2': speed = 75; break;
-            case '3': speed = 100; break;
-            case '4': speed = 125; break;
-            case '5': speed = 150; break;
-            case '6': speed = 175; break;
-            case '7': speed = 200; break;
-            case '8': speed = 225; break;
-            case '9': speed = 250; break;
+            leds[0] = CRGB::Red;
+            leds[1] = CRGB::Red;
+            FastLED.show();
         }
     }
 }
